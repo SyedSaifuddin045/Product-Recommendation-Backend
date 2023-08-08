@@ -1,4 +1,5 @@
 import csv
+import json
 import sys
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -131,7 +132,7 @@ def process_review(page_link,index):
     positive_ratings = extract_numbers(Positive_reviews_text)
 
     review_results.append((positive_ratings, total_ratings, index))
-    print(f"Added Rating for {index} product")    
+    print(f"Getting Rating for product number : {index}")    
 
 # Read the search text from command-line arguments
 searchtext = extract_argument_value(sys.argv, '-st')
@@ -210,10 +211,10 @@ csvrows.sort(key=lambda row: row[-1],reverse=True)
 print("Rating Completed!")
 print(csvrows)
 # Write the updated rows back to the CSV file
-with open(f"{searchtext}.csv", "w", newline="") as csvfile:
-    writer = csv.writer(csvfile)
-    writer.writerow(["Item Name", "Price", "Site Rating", "Link", "Product ID", "Review Link", "Positive Reviews", "Total Reviews","Rating"])
+# with open(f"{searchtext}.csv", "w", newline="") as csvfile:
+#     writer = csv.writer(csvfile)
+#     writer.writerow(["Item Name", "Price", "Site Rating", "Link", "Product ID", "Review Link", "Positive Reviews", "Total Reviews","Rating"])
 
-    writer.writerows(csvrows)
+#     writer.writerows(csvrows)
 
-print(f"CSV file created successfully, of Name: {searchtext}.csv")
+print(f"Search Completed for : {searchtext}")

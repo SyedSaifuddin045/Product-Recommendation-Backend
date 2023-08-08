@@ -27,11 +27,33 @@ server.listen(PORT, () => {
 
 io.on('connection', (socket) => {
   console.log('Client connected');
+  
+  socket.on('GetFilter', (input) => {
+    const pyshell = new PythonShell('GetFilters.py', {
+      mode: 'json',
+      args:['-st',input]
+    });
+  
+    pyshell.on('json', (jsonString) => {
+      const filterJson = JSON.parse(jsonString);
+      console.log(filterJson)
+      socket.emit('filterResult', filterJson);
+    });
+  
+    pyshell.end((err) => {
+      if (err) {
+        console.error(err);
+        socket.emit('filterError', 'An error occurred');
+      }
+    });
+  });
+  
+
   socket.on('StartScript', (input) => {
     const pyshell = new PythonShell('ScrapeAmazon.py', { mode: 'text', pythonOptions: ['-u'],args:['-st',input] })
     console.log("Started running pyhton script")
     pyshell.on('message', (message) => {
-      console.log("Message " + message)
+      console.log("Message :" + message)
       socket.emit('progress', message);
     });
     pyshell.end(function (err) {
