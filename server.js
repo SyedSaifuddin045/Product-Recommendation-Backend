@@ -3,6 +3,7 @@ const http = require('http')
 const { PythonShell } = require('python-shell')
 const cors = require('cors')
 const { Server } = require('socket.io')
+const fs = require('fs')
 
 const app = express();
 app.use(cors())
@@ -62,6 +63,16 @@ io.on('connection', (socket) => {
       }
       else {
         console.log('Script Execution Finished');
+        fs.readFile(`${input}.json`,'utf-8',(err,data)=>{
+          if(err)
+          {
+            console.log("Error reading Json file."+err);
+          }
+          else
+          {
+            socket.emit('json',data)
+          }
+        })
       }
     });
 

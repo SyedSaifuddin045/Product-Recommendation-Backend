@@ -1,4 +1,3 @@
-import csv
 import json
 import sys
 from bs4 import BeautifulSoup
@@ -13,7 +12,7 @@ import threading
 options = Options()
 options.add_argument('-headless')
 
-csvrows = []
+products = []
 def extract_argument_value(args, key):
     start_index = -1
     for i in range(len(args)):
@@ -68,7 +67,7 @@ def Rate_Product(site_rating,positive_ratings,total_ratings):
     rating = (w1 * (positive_ratings / total_ratings) ) + (w2 * total_ratings) + (w3 * positive_ratings) + (w4 * site_rating)  
     return rating
 
-def process_results(page_link, csvrows):
+def process_results(page_link,products):
     # Create a new instance of the browser
     browser = webdriver.Firefox(options)
     browser.get(page_link)
@@ -83,18 +82,20 @@ def process_results(page_link, csvrows):
     soup = BeautifulSoup(html, 'lxml')
     results = soup.find_all('div', class_='s-result-item')
 
-    # Add the results to the csvrows list
+    # Add the results to the Products list
     for result in results:
         item_name_elem = result.find('span', class_='a-text-normal')
         item_price = result.find('span', class_='a-price-whole')
         item_rating = result.find('span', class_='a-icon-alt')
         item_url = result.find('a', class_='a-link-normal')
-
+        item_image = result.find('img',class_='s-image')
+        
         # Skip the item if any of the elements are null
-        if item_name_elem is None or item_price is None or item_url is None or item_rating is None:
+        if item_name_elem is None or item_price is None or item_url is None or item_rating is None or item_image is None:
             continue
 
         # Extract the text from the elements
+        image_url = item_image.get('src')
         item_name = item_name_elem.text
         price = item_price.text
         rating = item_rating.text
@@ -106,9 +107,21 @@ def process_results(page_link, csvrows):
 
         link = website_address + '/dp/' + product_id
         review_link = website_address + f'/product-reviews/{product_id}' + '/ref=cm_cr_arp_d_viewopt_sr?ie=UTF8&filterByStar=positive'
-        # Add a row for each item to the csvrows list
+        # Add a row for each item to the products list
         print(("Adding product from Page"))
-        csvrows.append([item_name, price, rating, link, product_id, review_link, "", "", ""])
+        product = {
+            "item_name": item_name,
+            "image_url":image_url,
+            "price": price,
+            "rating": rating,
+            "link": link,
+            "product_id": product_id,
+            "review_link": review_link,
+            "positive_reviews": "",
+            "total_reviews": "",
+            "rating_value": ""
+        }
+        products.append(product)
 
 def process_review(page_link,index):
     # Create a new instance of the browser
@@ -153,7 +166,7 @@ for i in range(1, 3):
 # Create and start threads for processing results of other pages
 threads = []
 for link in page_links:
-    thread = threading.Thread(target=process_results, args=(link,csvrows))
+    thread = threading.Thread(target=process_results, args=(link,products))
     thread.start()
     threads.append(thread)
 
@@ -161,13 +174,13 @@ for link in page_links:
 for thread in threads:
     thread.join()
 
-print(f"Got Products{len(csvrows)}")
+print(f"Got {len(products)} Products")
 # List to store review links
 review_links = []
 
 # Read each row in the csvrows list
-for row in csvrows:
-    review_link = row[5]  # Assuming review link is in the 6th column
+for row in products:
+    review_link = row["review_link"]  # Assuming review link is in the 6th column
     review_links.append(review_link)
 
 # Create and start threads for processing review links
@@ -200,21 +213,20 @@ for thread in threads:
 for positive_reviews, total_reviews, row_index in review_results:
     # print(f"Row Index: {row_index}")
     # print(f"CSV Rows Length: {len(csvrows)}")
-    if row_index < len(csvrows):
-        csvrows[row_index][-3] = positive_reviews
-        csvrows[row_index][-2] = total_reviews
-        csvrows[row_index][-1] = Rate_Product(csvrows[row_index][2], positive_reviews, total_reviews)
+    if row_index < len(products):
+        products[row_index]["positive_reviews"] = positive_reviews
+        products[row_index]["total_reviews"] = total_reviews
+        products[row_index]["rating_value"] = Rate_Product(products[row_index]["rating"], positive_reviews, total_reviews)
     else:
         print("Invalid row index")
 
-csvrows.sort(key=lambda row: row[-1],reverse=True)
+products.sort(key=lambda product:product["rating_value"],reverse=True)
 print("Rating Completed!")
-print(csvrows)
-# Write the updated rows back to the CSV file
-# with open(f"{searchtext}.csv", "w", newline="") as csvfile:
-#     writer = csv.writer(csvfile)
-#     writer.writerow(["Item Name", "Price", "Site Rating", "Link", "Product ID", "Review Link", "Positive Reviews", "Total Reviews","Rating"])
 
-#     writer.writerows(csvrows)
+json_string = json.dumps(products,indent=4)
 
-print(f"Search Completed for : {searchtext}")
+file_path = f"{searchtext}.json"  # specify the file path
+with open(file_path, "w") as outfile:
+    outfile.write(json_string)
+
+#print(f"Search Completed for : {searchtext}")
