@@ -24,7 +24,7 @@ RUN npm install
 COPY . .
 
 # Expose the port on which your Node.js server is listening
-EXPOSE 4500
+EXPOSE 3500
 
 # Set the default command to run when the container starts
 CMD ["node", "server.js"]
