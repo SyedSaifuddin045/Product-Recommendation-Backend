@@ -23,7 +23,8 @@ RUN npm install
 COPY . .
 
 # Install pip packages specific to the application
-RUN pip3 install beautifulsoup4 selenium
+RUN pip install beautifulsoup4 selenium
+RUN pip list
 
 # Expose the port on which your Node.js server is listening
 EXPOSE 3500
