@@ -147,7 +147,6 @@ def process_review(page_link,index):
     review_results.append((positive_ratings, total_ratings, index))
     print(f"Getting Rating for product number : {index}")    
 
-# Read the search text from command-line arguments
 searchtext = extract_argument_value(sys.argv, '-st')
 print(f'Search Text : {searchtext}')
 
@@ -155,78 +154,36 @@ website_address = "https://www.amazon.in"
 search_url = website_address + f'/s?k={searchtext}'
 
 print("Search Started on Amazon.")
-# List to store page links
-page_links = []
+products = []
 
 # Adding page urls
 for i in range(1, 3):
-    search_url += f'&page={i}'
-    page_links.append(search_url)
-
-# Create and start threads for processing results of other pages
-threads = []
-for link in page_links:
-    thread = threading.Thread(target=process_results, args=(link,products))
-    thread.start()
-    threads.append(thread)
-
-# Wait for all threads to complete
-for thread in threads:
-    thread.join()
+    search_url = website_address + f'/s?k={searchtext}&page={i}'
+    process_results(search_url, products)
 
 print(f"Got {len(products)} Products")
-# List to store review links
-review_links = []
 
-# Read each row in the csvrows list
-for row in products:
-    review_link = row["review_link"]  # Assuming review link is in the 6th column
-    review_links.append(review_link)
-
-# Create and start threads for processing review links
 review_results = []
-threads = []
-max_threads = 8
-current_threads = 0
 
-print("Getting reviews of Products")
 i = 0
-for link in review_links:
-    # Check if maximum threads limit is reached
-    if current_threads >= max_threads:
-        # Wait for a thread to finish before starting a new one
-        threads[0].join()
-        threads.pop(0)
-        current_threads -= 1
-
-    thread = threading.Thread(target=process_review, args=(link,i))
-    thread.start()
-    threads.append(thread)
-    current_threads += 1
-    
+for product in products:
+    review_link = product["review_link"]
+    process_review(review_link, i)
     i+=1
-# Wait for all threads to complete
-for thread in threads:
-    thread.join()
 
-# Update the positive reviews, total reviews, and rating in the corresponding rows of csvrows
 for positive_reviews, total_reviews, row_index in review_results:
-    # print(f"Row Index: {row_index}")
-    # print(f"CSV Rows Length: {len(csvrows)}")
     if row_index < len(products):
         products[row_index]["positive_reviews"] = positive_reviews
         products[row_index]["total_reviews"] = total_reviews
         products[row_index]["rating_value"] = Rate_Product(products[row_index]["rating"], positive_reviews, total_reviews)
-    else:
-        print("Invalid row index")
 
-products.sort(key=lambda product:product["rating_value"],reverse=True)
+products.sort(key=lambda product: product["rating_value"], reverse=True)
 print("Rating Completed!")
 
-json_string = json.dumps(products,indent=4)
+json_string = json.dumps(products, indent=4)
 
-file_path = f"{searchtext}.json"  # specify the file path
+file_path = f"{searchtext}.json"
 with open(file_path, "w") as outfile:
     outfile.write(json_string)
 
-#print(f"Search Completed for : {searchtext}")
+print("Search Completed!")
